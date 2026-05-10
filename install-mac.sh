@@ -59,7 +59,7 @@ cat <<'BANNER'
   이 스크립트가 수행할 작업:
   This script will:
 
-    1. 공식 DMG 다운로드 / Download the official DMG경
+    1. 공식 DMG 다운로드 / Download the official DMG
     2. 실행 중인 After5 종료 / Quit any running After5
     3. /Applications/After5.app 으로 설치 / Install to /Applications
     4. macOS 의 미서명 앱 차단 우회 / Bypass macOS unsigned-app block
