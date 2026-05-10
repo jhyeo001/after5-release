@@ -35,10 +35,10 @@ warn() { printf '\033[33m!\033[0m %s\n' "$1" >&2; }
 err()  { printf '\033[31m✗\033[0m %s\n' "$1" >&2; exit 1; }
 
 cleanup() {
-  if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
-    hdiutil detach "$TMP_DIR" -quiet 2>/dev/null || true
+  if [ -n "${TMP_DIR}" ] && [ -d "${TMP_DIR}" ]; then
+    hdiutil detach "${TMP_DIR}" -quiet 2>/dev/null || true
   fi
-  rm -f "$TMP_DMG"
+  rm -f "${TMP_DMG}"
 }
 trap cleanup EXIT
 
@@ -79,7 +79,7 @@ if [ "${AFTER5_NO_PROMPT:-}" != "1" ]; then
     REPLY="y"
     info "non-interactive 환경 — prompt 생략"
   fi
-  if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+  if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then
     info "취소됨."
     exit 0
   fi
@@ -94,37 +94,37 @@ if [ ! -w "/Applications" ]; then
   관리되는 Mac (회사 / 학교) 일 가능성이 큽니다. 개인 Mac 에서 다시
   시도하거나, IT 관리자에게 /Applications 쓰기 권한을 요청해주세요.
 
-  문의: $SUPPORT_EMAIL
+  문의: ${SUPPORT_EMAIL}
 EOF
   exit 1
 fi
 
 # ── 1. 다운로드 ──────────────────────────────────────────
-info "DMG 다운로드 중…  $DMG_URL"
-if ! curl -fL --progress-bar "$DMG_URL" -o "$TMP_DMG"; then
+info "DMG 다운로드 중…  ${DMG_URL}"
+if ! curl -fL --progress-bar "${DMG_URL}" -o "${TMP_DMG}"; then
   err "다운로드 실패. URL 또는 네트워크를 확인해주세요."
 fi
-ok "다운로드 완료 ($(du -h "$TMP_DMG" | awk '{print $1}'))"
+ok "다운로드 완료 ($(du -h "${TMP_DMG}" | awk '{print $1}'))"
 
 # ── 2. SHA256 검증 (옵션) ────────────────────────────────
 if [ -n "${AFTER5_EXPECTED_SHA256:-}" ]; then
   info "SHA256 검증 중…"
-  ACTUAL=$(shasum -a 256 "$TMP_DMG" | awk '{print $1}')
-  if [ "$ACTUAL" != "$AFTER5_EXPECTED_SHA256" ]; then
+  ACTUAL=$(shasum -a 256 "${TMP_DMG}" | awk '{print $1}')
+  if [ "${ACTUAL}" != "$AFTER5_EXPECTED_SHA256" ]; then
     err "SHA256 불일치.
     expected: $AFTER5_EXPECTED_SHA256
-    actual:   $ACTUAL"
+    actual:   ${ACTUAL}"
   fi
   ok "SHA256 검증 통과"
 fi
 
 # ── 3. 실행 중인 After5 종료 ─────────────────────────────
-if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
-  info "실행 중인 $APP_NAME 종료 중…"
-  pkill -x "$APP_NAME" 2>/dev/null || true
+if pgrep -x "${APP_NAME}" >/dev/null 2>&1; then
+  info "실행 중인 ${APP_NAME} 종료 중…"
+  pkill -x "${APP_NAME}" 2>/dev/null || true
   sleep 1
-  if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
-    pkill -9 -x "$APP_NAME" 2>/dev/null || true
+  if pgrep -x "${APP_NAME}" >/dev/null 2>&1; then
+    pkill -9 -x "${APP_NAME}" 2>/dev/null || true
     sleep 1
   fi
   ok "종료됨"
@@ -133,30 +133,30 @@ fi
 # ── 4. 마운트 + 복사 + 언마운트 ──────────────────────────
 info "DMG 마운트 중…"
 TMP_DIR=$(mktemp -d -t after5_mount)
-hdiutil attach "$TMP_DMG" -mountpoint "$TMP_DIR" -nobrowse -quiet
-ok "마운트됨: $TMP_DIR"
+hdiutil attach "${TMP_DMG}" -mountpoint "${TMP_DIR}" -nobrowse -quiet
+ok "마운트됨: ${TMP_DIR}"
 
-if [ ! -d "$TMP_DIR/$APP_NAME.app" ]; then
-  err "$APP_NAME.app 을 DMG 안에서 찾을 수 없어요.
+if [ ! -d "${TMP_DIR}/${APP_NAME}.app" ]; then
+  err "${APP_NAME}.app 을 DMG 안에서 찾을 수 없어요.
 DMG 구조가 예상과 다를 수 있습니다.
-문의: $SUPPORT_EMAIL"
+문의: ${SUPPORT_EMAIL}"
 fi
 
-if [ -d "/Applications/$APP_NAME.app" ]; then
-  info "기존 /Applications/$APP_NAME.app 교체"
-  rm -rf "/Applications/$APP_NAME.app"
+if [ -d "/Applications/${APP_NAME}.app" ]; then
+  info "기존 /Applications/${APP_NAME}.app 교체"
+  rm -rf "/Applications/${APP_NAME}.app"
 fi
 
-info "/Applications/$APP_NAME.app 으로 복사 중…"
-cp -R "$TMP_DIR/$APP_NAME.app" /Applications/
+info "/Applications/${APP_NAME}.app 으로 복사 중…"
+cp -R "${TMP_DIR}/${APP_NAME}.app" /Applications/
 ok "설치 완료"
 
-hdiutil detach "$TMP_DIR" -quiet
+hdiutil detach "${TMP_DIR}" -quiet
 TMP_DIR=""
 
 # ── 5. Quarantine 제거 (Gatekeeper 우회) ─────────────────
 info "Gatekeeper quarantine 속성 제거 중…"
-if xattr -dr com.apple.quarantine "/Applications/$APP_NAME.app" 2>/dev/null; then
+if xattr -dr com.apple.quarantine "/Applications/${APP_NAME}.app" 2>/dev/null; then
   ok "quarantine 제거 — 보안 경고 없음"
 else
   warn "quarantine 제거 건너뜀 (이미 없거나 권한 부족)"
@@ -164,16 +164,16 @@ fi
 
 # ── 6. 실행 ──────────────────────────────────────────────
 if [ "${AFTER5_NO_LAUNCH:-}" = "1" ]; then
-  ok "설치 완료. /Applications/$APP_NAME.app 에서 실행하세요."
+  ok "설치 완료. /Applications/${APP_NAME}.app 에서 실행하세요."
 else
-  info "$APP_NAME 실행 중…"
-  open "/Applications/$APP_NAME.app"
+  info "${APP_NAME} 실행 중…"
+  open "/Applications/${APP_NAME}.app"
   ok "완료. 즐거운 베타 테스트 되세요!"
 fi
 
 cat <<EOF
 
   피드백 / 문제 문의:
-  $SUPPORT_EMAIL
+  ${SUPPORT_EMAIL}
 
 EOF
