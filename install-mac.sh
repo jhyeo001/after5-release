@@ -35,10 +35,10 @@ warn() { printf '\033[33m!\033[0m %s\n' "$1" >&2; }
 err()  { printf '\033[31m✗\033[0m %s\n' "$1" >&2; exit 1; }
 
 cleanup() {
-  if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
-    hdiutil detach "$TMP_DIR" -quiet 2>/dev/null || true
+  if [ -n "${TMP_DIR}" ] && [ -d "${TMP_DIR}" ]; then
+    hdiutil detach "${TMP_DIR}" -quiet 2>/dev/null || true
   fi
-  rm -f "$TMP_DMG"
+  rm -f "${TMP_DMG}"
 }
 trap cleanup EXIT
 
@@ -79,7 +79,7 @@ if [ "${AFTER5_NO_PROMPT:-}" != "1" ]; then
     REPLY="y"
     info "non-interactive — skipping prompt"
   fi
-  if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+  if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then
     info "Cancelled."
     exit 0
   fi
@@ -94,37 +94,37 @@ if [ ! -w "/Applications" ]; then
   This often happens on managed Macs (work / school). Try on a personal
   Mac, or ask your IT admin for write access to /Applications.
 
-  Contact: $SUPPORT_EMAIL
+  Contact: ${SUPPORT_EMAIL}
 EOF
   exit 1
 fi
 
 # ── 1. Download ──────────────────────────────────────────
-info "Downloading DMG…  $DMG_URL"
-if ! curl -fL --progress-bar "$DMG_URL" -o "$TMP_DMG"; then
+info "Downloading DMG…  ${DMG_URL}"
+if ! curl -fL --progress-bar "${DMG_URL}" -o "${TMP_DMG}"; then
   err "Download failed. Check the URL or your network."
 fi
-ok "Downloaded ($(du -h "$TMP_DMG" | awk '{print $1}'))"
+ok "Downloaded ($(du -h "${TMP_DMG}" | awk '{print $1}'))"
 
 # ── 2. SHA256 verify (optional) ──────────────────────────
 if [ -n "${AFTER5_EXPECTED_SHA256:-}" ]; then
   info "Verifying SHA256…"
-  ACTUAL=$(shasum -a 256 "$TMP_DMG" | awk '{print $1}')
-  if [ "$ACTUAL" != "$AFTER5_EXPECTED_SHA256" ]; then
+  ACTUAL=$(shasum -a 256 "${TMP_DMG}" | awk '{print $1}')
+  if [ "${ACTUAL}" != "$AFTER5_EXPECTED_SHA256" ]; then
     err "SHA256 mismatch.
     expected: $AFTER5_EXPECTED_SHA256
-    actual:   $ACTUAL"
+    actual:   ${ACTUAL}"
   fi
   ok "SHA256 verified"
 fi
 
 # ── 3. Quit running After5 ───────────────────────────────
-if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
-  info "Quitting running $APP_NAME…"
-  pkill -x "$APP_NAME" 2>/dev/null || true
+if pgrep -x "${APP_NAME}" >/dev/null 2>&1; then
+  info "Quitting running ${APP_NAME}…"
+  pkill -x "${APP_NAME}" 2>/dev/null || true
   sleep 1
-  if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
-    pkill -9 -x "$APP_NAME" 2>/dev/null || true
+  if pgrep -x "${APP_NAME}" >/dev/null 2>&1; then
+    pkill -9 -x "${APP_NAME}" 2>/dev/null || true
     sleep 1
   fi
   ok "Quit"
@@ -133,30 +133,30 @@ fi
 # ── 4. Mount + copy + unmount ────────────────────────────
 info "Mounting DMG…"
 TMP_DIR=$(mktemp -d -t after5_mount)
-hdiutil attach "$TMP_DMG" -mountpoint "$TMP_DIR" -nobrowse -quiet
-ok "Mounted: $TMP_DIR"
+hdiutil attach "${TMP_DMG}" -mountpoint "${TMP_DIR}" -nobrowse -quiet
+ok "Mounted: ${TMP_DIR}"
 
-if [ ! -d "$TMP_DIR/$APP_NAME.app" ]; then
-  err "Cannot find $APP_NAME.app inside the DMG.
+if [ ! -d "${TMP_DIR}/${APP_NAME}.app" ]; then
+  err "Cannot find ${APP_NAME}.app inside the DMG.
 DMG structure may differ from expected.
-Contact: $SUPPORT_EMAIL"
+Contact: ${SUPPORT_EMAIL}"
 fi
 
-if [ -d "/Applications/$APP_NAME.app" ]; then
-  info "Replacing existing /Applications/$APP_NAME.app"
-  rm -rf "/Applications/$APP_NAME.app"
+if [ -d "/Applications/${APP_NAME}.app" ]; then
+  info "Replacing existing /Applications/${APP_NAME}.app"
+  rm -rf "/Applications/${APP_NAME}.app"
 fi
 
-info "Copying to /Applications/$APP_NAME.app…"
-cp -R "$TMP_DIR/$APP_NAME.app" /Applications/
+info "Copying to /Applications/${APP_NAME}.app…"
+cp -R "${TMP_DIR}/${APP_NAME}.app" /Applications/
 ok "Installed"
 
-hdiutil detach "$TMP_DIR" -quiet
+hdiutil detach "${TMP_DIR}" -quiet
 TMP_DIR=""
 
 # ── 5. Remove quarantine (Gatekeeper bypass) ─────────────
 info "Removing quarantine attribute…"
-if xattr -dr com.apple.quarantine "/Applications/$APP_NAME.app" 2>/dev/null; then
+if xattr -dr com.apple.quarantine "/Applications/${APP_NAME}.app" 2>/dev/null; then
   ok "quarantine removed — no security warning"
 else
   warn "quarantine skipped (already absent or permission)"
@@ -164,16 +164,16 @@ fi
 
 # ── 6. Launch ────────────────────────────────────────────
 if [ "${AFTER5_NO_LAUNCH:-}" = "1" ]; then
-  ok "Installed. Launch from /Applications/$APP_NAME.app."
+  ok "Installed. Launch from /Applications/${APP_NAME}.app."
 else
-  info "Launching $APP_NAME…"
-  open "/Applications/$APP_NAME.app"
+  info "Launching ${APP_NAME}…"
+  open "/Applications/${APP_NAME}.app"
   ok "Done. Enjoy the beta!"
 fi
 
 cat <<EOF
 
   Feedback or issues:
-  $SUPPORT_EMAIL
+  ${SUPPORT_EMAIL}
 
 EOF
